@@ -8,6 +8,8 @@ public class FileSystem {
 
     public FileSystem() {
         Arrays.fill(files, false);
+
+        menu();
     }
 
     private void menu() {
@@ -15,39 +17,44 @@ public class FileSystem {
         String userInput = "";
         do {
             userInput = in.nextLine();
-            try {
-                int file = Integer.parseInt(userInput.split(" ")[1].split("file")[1]);
-
-                switch (userInput.split(" ")[0]) {
-                    case "add":
-                        if (file < 0 || file > files.length) {
-                            System.out.println("Cannot add the file" + userInput);
-                        } else {
-                            addFile(file);
-                            System.out.println("The file " + userInput + " added successfully");
+            if (!userInput.matches("exit")) {
+                try {
+                    int file = Integer.parseInt(userInput.split(" ")[1].split("file")[1]) - 1;
+                    switch (userInput.split(" ")[0]) {
+                        case "add" -> {
+                            if (file < 0 || file > 9 || getFile(file)) {
+                                System.out.println("Cannot add the file " + userInput.split(" ")[1]);
+                            } else {
+                                addFile(file);
+                                System.out.println("The file " + userInput.split(" ")[1] + " added successfully");
+                            }
                         }
-                        break;
-                    case "delete":
-                        if (file < 0 || file > files.length) {
-                            System.out.println("The file " + userInput + " not found");
-                        } else if (!getFile(file)) {
-                            System.out.println("The file " + userInput + " not found");
-                        } else {
-                            deleteFile(file);
-                            System.out.println("The file " + userInput + " added successfully");
+                        case "delete" -> {
+                            if (file < 0 || file > files.length) {
+                                System.out.println("The file " + userInput.split(" ")[1] + " not found");
+                            } else if (!getFile(file)) {
+                                System.out.println("The file " + userInput.split(" ")[1] + " not found");
+                            } else {
+                                deleteFile(file);
+                                System.out.println("The file " + userInput.split(" ")[1] + " was deleted");
+                            }
                         }
-                        break;
-                    case "get":
-                        if (file < 0 || file > files.length || !getFile(file)) {
-                            System.out.println("The file " + userInput + " not found");
+                        case "get" -> {
+                            if (file < 0 || file > files.length || !getFile(file)) {
+                                System.out.println("The file " + userInput.split(" ")[1] + " not found");
+                            } else {
+                                System.out.println("The file " + userInput.split(" ")[1] + " was sent");
+                            }
                         }
-                        break;
-                    default:
-                        System.out.println("Invalid command");
-                        break;
+                        default -> System.out.println("Invalid command");
+                    }
+                } catch (NumberFormatException e) {
+                    switch (userInput.split(" ")[0]) {
+                        case "add" -> System.out.println("Cannot add the file " + userInput.split(" ")[1]);
+                        case "delete", "get" -> System.out.println("The file " + userInput.split(" ")[1] +
+                                " not found");
+                    }
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid file name");
             }
         } while (!userInput.equals("exit"));
     }
