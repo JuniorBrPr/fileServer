@@ -2,15 +2,15 @@ package server.fileSystem;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
 
 class Session extends Thread {
     private final Socket socket;
-    private final String MESSAGE = "All files were sent!";
+    private FileSystem fileSystem;
 
-    public Session(Socket socketForClient) {
+    public Session(Socket socketForClient, FileSystem fileSystem) {
         this.socket = socketForClient;
+        this.fileSystem = fileSystem;
     }
 
     public void run() {
@@ -18,14 +18,29 @@ class Session extends Thread {
                 DataInputStream input = new DataInputStream(socket.getInputStream());
                 DataOutputStream output = new DataOutputStream(socket.getOutputStream())
         ) {
-            String msg = input.readUTF();
-            System.out.println("Received: " + msg);
+            String command = input.readUTF();
+            String message;
 
-            output.writeUTF(MESSAGE);
-            System.out.println("Sent: " + MESSAGE);
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            if (command.equals("exit")) {
+                message = "200";
+                fileSystem.setExit(true);
+            } else {
+                try {
+                    message = switch (command.charAt(0)) {
+                        case '1' -> fileSystem.getFile(command.substring(2));
+                        case '2' -> fileSystem.addFile(command.substring(2).split(" ")[0],
+                                command.substring(2).split(" ")[1].getBytes());
+                        case '3' -> fileSystem.deleteFile(command.substring(2));
+                        default -> "501";
+                    };
+                } catch (Exception e) {
+                    System.out.println("Error: " + e.getMessage());
+                    message = "501";
+                }
+            }
+            output.writeUTF(message);
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
         }
     }
 }
