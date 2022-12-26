@@ -1,4 +1,4 @@
-package client;
+package client.fileSystem;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -7,22 +7,18 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Scanner;
 
-class Main {
-    public static void main(String[] args) {
-        FileSystemClient client = new FileSystemClient();
-    }
-}
-
-public class FileSystemClient {
-    private final String ADDRESS = "127.0.0.1";
-    private final int PORT = 23456;
+public class FileSystemClient extends Thread {
     private final Scanner scanner = new Scanner(System.in);
 
-    public FileSystemClient() {
+    @Override
+    public void run() {
+        String ADDRESS = "127.0.0.1";
+        int PORT = 23456;
+
         try (
                 Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream())
         ) {
             boolean correctCommand = false;
             do {
@@ -35,20 +31,19 @@ public class FileSystemClient {
                     System.exit(1);
                 } else {
                     switch (command.charAt(0)) {
-                        case '1':
+                        case '1' -> {
                             getFile(command, input, output);
                             correctCommand = true;
-                            break;
-                        case '2':
+                        }
+                        case '2' -> {
                             addFile(command, input, output);
                             correctCommand = true;
-                            break;
-                        case '3':
+                        }
+                        case '3' -> {
                             deleteFile(command, input, output);
                             correctCommand = true;
-                            break;
-                        default:
-                            System.out.println("Incorrect command!");
+                        }
+                        default -> System.out.println("Incorrect command!");
                     }
                 }
             } while (!correctCommand);

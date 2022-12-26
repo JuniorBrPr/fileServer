@@ -9,7 +9,8 @@ import java.util.stream.Stream;
 
 public class FileSystem {
     private HashMap<String, String> files;
-    private final Path ROOT = ""; //Insert the path to the root folder of the file system
+
+    private final Path ROOT = Paths.get("/Users/macbookpro/IdeaProjects/fileServer/File Server/task/src/server/data"); //Insert the path to the root folder of the file system
     private boolean exit = false;
 
     public FileSystem() {
