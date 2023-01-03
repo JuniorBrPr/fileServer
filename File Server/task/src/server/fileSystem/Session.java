@@ -4,43 +4,54 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
 
-class Session extends Thread {
+class Session implements Runnable {
     private final Socket socket;
-    private FileSystem fileSystem;
+    private final FileSystem fileSystem;
 
     public Session(Socket socketForClient, FileSystem fileSystem) {
         this.socket = socketForClient;
         this.fileSystem = fileSystem;
+        System.out.println("Client connected!");
     }
 
+    @Override
     public void run() {
-        try (
-                DataInputStream input = new DataInputStream(socket.getInputStream());
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream())
-        ) {
-            String command = input.readUTF();
-            String message;
+        String command = "";
+        do {
+            try (
+                    DataInputStream input = new DataInputStream(socket.getInputStream());
+                    DataOutputStream output = new DataOutputStream(socket.getOutputStream())
+            ) {
+                command = input.readUTF();
+                String message;
 
-            if (command.equals("exit")) {
-                message = "200";
-                fileSystem.setExit(true);
-            } else {
-                try {
-                    message = switch (command.charAt(0)) {
-                        case '1' -> fileSystem.getFile(command.substring(2));
-                        case '2' -> fileSystem.addFile(command.substring(2).split(" ")[0],
-                                command.substring(2).split(" ")[1].getBytes());
-                        case '3' -> fileSystem.deleteFile(command.substring(2));
-                        default -> "501";
-                    };
-                } catch (Exception e) {
-                    System.out.println("Error: " + e.getMessage());
-                    message = "501";
+                if (command.equals("exit")) {
+                    message = "200";
+                    output.writeUTF(message);
+                    this.fileSystem.setExit(true);
+                    this.socket.close();
+                    break;
+                } else {
+                    try {
+                        message = switch (command.charAt(0)) {
+                            case '1' -> fileSystem.getFile(command.substring(2));
+                            case '2' -> fileSystem.addFile(command.substring(2).split(" ")[0],
+                                    command.substring(2).split(" ")[1].getBytes());
+                            case '3' -> fileSystem.deleteFile(command.substring(2));
+                            default -> "501";
+                        };
+                    } catch (Exception e) {
+                        System.out.println("Error: " + e.getMessage());
+                        message = "501";
+                    }
                 }
+                output.writeUTF(message);
+                socket.close();
+                break;
+            } catch (Exception e) {
+                System.out.println("Error in session: " + e.getMessage() + " " + command);
+                break;
             }
-            output.writeUTF(message);
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-        }
+        } while (command.length() == 0 || !fileSystem.isExit());
     }
 }

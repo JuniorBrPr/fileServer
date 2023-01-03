@@ -22,7 +22,7 @@ public class FileSystemClient {
         try (
                 Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream())
         ) {
             boolean correctCommand = false;
             do {
@@ -35,20 +35,19 @@ public class FileSystemClient {
                     System.exit(1);
                 } else {
                     switch (command.charAt(0)) {
-                        case '1':
+                        case '1' -> {
                             getFile(command, input, output);
                             correctCommand = true;
-                            break;
-                        case '2':
+                        }
+                        case '2' -> {
                             addFile(command, input, output);
                             correctCommand = true;
-                            break;
-                        case '3':
+                        }
+                        case '3' -> {
                             deleteFile(command, input, output);
                             correctCommand = true;
-                            break;
-                        default:
-                            System.out.println("Incorrect command!");
+                        }
+                        default -> System.out.println("Incorrect command!");
                     }
                 }
             } while (!correctCommand);
@@ -58,6 +57,37 @@ public class FileSystemClient {
         }
     }
 
+//    private void menu() {
+//        System.out.println("Enter action (1 - get a file, 2 - create a file, 3 - delete a file):");
+//        boolean correctCommand = false;
+//        do {
+//            String command = scanner.nextLine();
+//
+//            if (command.matches("exit")) {
+//                output.writeUTF(command);
+//                System.out.println("The request was sent.");
+//                System.exit(1);
+//            } else {
+//                switch (command.charAt(0)) {
+//                    case '1':
+//                        getFile(command, input, output);
+//                        correctCommand = true;
+//                        break;
+//                    case '2':
+//                        addFile(command, input, output);
+//                        correctCommand = true;
+//                        break;
+//                    case '3':
+//                        deleteFile(command, input, output);
+//                        correctCommand = true;
+//                        break;
+//                    default:
+//                        System.out.println("Incorrect command!");
+//                }
+//            }
+//        } while (!correctCommand);
+//    }
+
     private void deleteFile(String command, DataInputStream input, DataOutputStream output) throws IOException {
         System.out.println("Enter file name:");
         command += " " + scanner.nextLine();
@@ -65,6 +95,8 @@ public class FileSystemClient {
         output.writeUTF(command);
         System.out.println("The request was sent.");
         String receivedMsg = input.readUTF();
+
+        System.out.println(receivedMsg);
 
         if (receivedMsg.substring(0, 3).matches("200")) {
             System.out.println("The response says that the file was successfully deleted!");

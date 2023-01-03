@@ -4,12 +4,14 @@ import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.Stream;
 
 public class FileSystem {
     private HashMap<String, String> files;
-    private final Path ROOT = ""; //Insert the path to the root folder of the file system
+    private ArrayList<String> fileNames;
+    private final Path ROOT = Paths.get("C:\\Users\\junio\\OneDrive\\Bureaublad\\OOP1\\File Server\\File Server\\task\\src\\server\\data");
     private boolean exit = false;
 
     public FileSystem() {
@@ -17,23 +19,28 @@ public class FileSystem {
         loadFiles();
     }
 
+    //Store all files in the HashMap and store the file name as key and the file content as value
+    //Store the hash map in a serializable file
+
+
     protected String deleteFile(String fileName) {
         if (files.containsKey(fileName.strip())) {
             try {
                 Files.delete(Paths.get(ROOT + "/" + fileName.strip()));
                 files.remove(fileName.strip());
+                fileNames.remove(fileName.strip());
                 return "200";
             } catch (Exception e) {
                 System.out.println("Error while deleting file" + e.getMessage());
                 return "404";
             }
-        } else {
-            return "404";
         }
+        return "404";
     }
 
     protected String getFile(String fileName) {
         if (files.containsKey(fileName.strip())) {
+            System.out.println(fileNames.indexOf(fileName.strip()));
             return "200 " + new String(getFileData(fileName.strip()));
         }
         return "404";
@@ -71,10 +78,14 @@ public class FileSystem {
 
     protected void loadFiles() {
         this.files = new HashMap<>();
+        this.fileNames = new ArrayList<>();
         try (Stream<Path> paths = Files.walk(ROOT)) {
             paths
                     .filter(Files::isRegularFile)
-                    .forEach(file -> files.put(file.getFileName().toString(), file.toFile().getPath()));
+                    .forEach(file -> {
+                        files.put(file.getFileName().toString(), file.toFile().getPath());
+                        fileNames.add(file.getFileName().toString());
+                    });
         } catch (Exception e) {
             System.out.println("Error while loading files: " + e.getMessage());
         }
@@ -82,7 +93,7 @@ public class FileSystem {
 
     protected byte[] getFileData(String fileName) {
         try {
-            return Files.readAllBytes(Paths.get(ROOT + "/" + fileName ));
+            return Files.readAllBytes(Paths.get(ROOT + "/" + fileName));
         } catch (Exception e) {
             System.out.println("Error while getting file data: " + e.getMessage());
             return new byte[]{};
