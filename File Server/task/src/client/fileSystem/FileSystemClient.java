@@ -1,4 +1,4 @@
-package client;
+package client.fileSystem;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -7,18 +7,14 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Scanner;
 
-class Main {
-    public static void main(String[] args) {
-        FileSystemClient client = new FileSystemClient();
-    }
-}
-
-public class FileSystemClient {
-    private final String ADDRESS = "127.0.0.1";
-    private final int PORT = 23456;
+public class FileSystemClient extends Thread {
     private final Scanner scanner = new Scanner(System.in);
 
-    public FileSystemClient() {
+    @Override
+    public void run() {
+        String ADDRESS = "127.0.0.1";
+        int PORT = 23456;
+
         try (
                 Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
