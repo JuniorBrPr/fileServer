@@ -1,20 +1,22 @@
-package client.fileSystem;
+package client.system;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
 
-public class FileSystemClient extends Thread {
+public class FileSystemClient {
     private final Scanner scanner = new Scanner(System.in);
+    private final String ADDRESS = "127.0.0.1";
+    private final int PORT = 23456;
+    private final String ROOT = "C:\\Users\\junio\\OneDrive\\Bureaublad\\OOP1\\File Server\\File Server\\task\\src\\client\\data";
 
-    @Override
-    public void run() {
-        String ADDRESS = "127.0.0.1";
-        int PORT = 23456;
-
+    public FileSystemClient() {
         try (
                 Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
                 DataInputStream input = new DataInputStream(socket.getInputStream());
@@ -121,14 +123,45 @@ public class FileSystemClient extends Thread {
     private void getFile(String command, DataInputStream input, DataOutputStream output) throws IOException {
         System.out.println("Enter filename:");
         command += " " + scanner.nextLine();
-        output.writeUTF(command);
-        System.out.println("The request was sent.");
-        String receivedMsg = input.readUTF();
 
-        if (receivedMsg.substring(0, 3).matches("404")) {
-            System.out.println("The response says that the file was not found!");
-        } else if (receivedMsg.substring(0, 3).matches("200")) {
-            System.out.println("The content of the file is: " + receivedMsg.substring(4));
+        byte[] message = command.getBytes();
+
+        output.writeInt(message.length);
+        output.write(message);
+
+        System.out.println("The request was sent.");
+
+        int length = input.readInt();
+        byte[] msg = new byte[length];
+        input.readFully(msg, 0, msg.length);
+
+        System.out.println(new String(msg));
+//        String receivedMsg = input.readUTF();
+//
+//        if (receivedMsg.substring(0, 3).matches("404")) {
+//            System.out.println("The response says that the file was not found!");
+//        } else if (receivedMsg.substring(0, 3).matches("200")) {
+//            System.out.println("The content of the file is: " + receivedMsg.substring(4));
+//        }
+    }
+
+    /**
+     * Saves a file to user storage.
+     *
+     * @param fileName the name of the file
+     * @param data     the data of the file
+     * @return true if the file was saved successfully, false otherwise
+     */
+    protected boolean saveFile(String fileName, byte[] data) {
+        try {
+            Path path = Paths.get(ROOT + "/" + fileName);
+            try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
+                fos.write(data, 0, data.length);
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println("Error while saving file" + e.getMessage());
         }
+        return false;
     }
 }

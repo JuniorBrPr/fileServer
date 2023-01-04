@@ -1,10 +1,9 @@
 package client;
 
-import client.fileSystem.FileSystemClient;
+import client.system.FileSystemClient;
 
 public class Main {
     public static void main(String[] args) {
         FileSystemClient client = new FileSystemClient();
-        client.start();
     }
 }
