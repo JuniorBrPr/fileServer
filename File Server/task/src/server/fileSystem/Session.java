@@ -34,8 +34,8 @@ class Session implements Runnable {
                 } else {
                     try {
                         message = switch (command.charAt(0)) {
-                            case '1' -> fileSystem.getFile(command.substring(2));
-                            case '2' -> fileSystem.addFile(command.substring(2).split(" ")[0],
+                            case '1' -> fileSystem.GET(command.substring(2));
+                            case '2' -> fileSystem.PUT(command.substring(2).split(" ")[0],
                                     command.substring(2).split(" ")[1].getBytes());
                             case '3' -> fileSystem.deleteFile(command.substring(2));
                             default -> "501";
