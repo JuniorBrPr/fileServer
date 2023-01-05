@@ -1,13 +1,12 @@
 package client.system;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Scanner;
 
 public class FileSystemClient {
@@ -34,15 +33,15 @@ public class FileSystemClient {
                 } else {
                     switch (command.charAt(0)) {
                         case '1' -> {
-                            getFile(command, input, output);
+                            getFile(input, output);
                             correctCommand = true;
                         }
                         case '2' -> {
-                            addFile(command, input, output);
+                            addFile(input, output);
                             correctCommand = true;
                         }
                         case '3' -> {
-                            deleteFile(command, input, output);
+//                            deleteFile(input, output);
                             correctCommand = true;
                         }
                         default -> System.out.println("Incorrect command!");
@@ -86,43 +85,80 @@ public class FileSystemClient {
 //        } while (!correctCommand);
 //    }
 
-    private void deleteFile(String command, DataInputStream input, DataOutputStream output) throws IOException {
+//    private void deleteFile(DataInputStream input, DataOutputStream output) throws IOException {
+//        String command;
+//
+//        System.out.println("Enter file name:");
+//        command += " " + scanner.nextLine();
+//
+//        output.writeUTF(command);
+//        System.out.println("The request was sent.");
+//        String receivedMsg = input.readUTF();
+//
+//        System.out.println(receivedMsg);
+//
+//        if (receivedMsg.substring(0, 3).matches("200")) {
+//            System.out.println("The response says that the file was successfully deleted!");
+//        } else {
+//            System.out.println("The response says that the file was not found!");
+//        }
+//    }
+
+    private void addFile(DataInputStream input, DataOutputStream output) throws IOException {
         System.out.println("Enter file name:");
-        command += " " + scanner.nextLine();
+        String filename = scanner.nextLine();
 
-        output.writeUTF(command);
-        System.out.println("The request was sent.");
-        String receivedMsg = input.readUTF();
+        File file = new File(ROOT + "\\" + filename);
 
-        System.out.println(receivedMsg);
+        if (file.exists()) {
+            output.writeUTF("2");
+            output.writeUTF(filename);
+            byte[] data = Files.readAllBytes(file.toPath());
 
-        if (receivedMsg.substring(0, 3).matches("200")) {
-            System.out.println("The response says that the file was successfully deleted!");
+            output.writeInt(data.length);
+            output.write(data);
+
+            System.out.println("The request was sent.");
+
+            String receivedMsg = input.readUTF();
+            System.out.println(receivedMsg);
+
+            if (receivedMsg.substring(0, 3).matches("200")) {
+                System.out.println("The response says that the file was successfully created!");
+            } else {
+                System.out.println("The response says that the file already exists!");
+            }
         } else {
-            System.out.println("The response says that the file was not found!");
+            System.out.println("The file does not exist!");
         }
+//
+//        System.out.println("The request was sent.");
+//        String receivedMsg = input.readUTF();
+//
+//        if (receivedMsg.substring(0, 3).matches("200")) {
+//            System.out.println("The response says that file was created!");
+//        } else {
+//            System.out.println("The response says that creating the file was forbidden!");
+//        }
     }
 
-    private void addFile(String command, DataInputStream input, DataOutputStream output) throws IOException {
-        System.out.println("Enter file name:");
-        command += " " + scanner.nextLine();
-        System.out.println("Enter file content:");
-        command += " " + scanner.nextLine();
+    private void getFile(DataInputStream input, DataOutputStream output) throws IOException {
+        System.out.println("Do you want to get the file by name or by id (1 - name, 2 - id)");
+        String command = scanner.nextLine();
 
-        output.writeUTF(command);
-        System.out.println("The request was sent.");
-        String receivedMsg = input.readUTF();
-
-        if (receivedMsg.substring(0, 3).matches("200")) {
-            System.out.println("The response says that file was created!");
+        if (Objects.equals(command, "1")) {
+            output.writeInt(1);
+            System.out.println("Enter filename:");
+            String filename = scanner.nextLine();
+            output.writeUTF(filename);
         } else {
-            System.out.println("The response says that creating the file was forbidden!");
+            output.writeInt(2);
+            System.out.println("Enter id:");
+            int id = scanner.nextInt();
+            output.writeInt(id);
         }
-    }
 
-    private void getFile(String command, DataInputStream input, DataOutputStream output) throws IOException {
-        System.out.println("Enter filename:");
-        command += " " + scanner.nextLine();
+        System.out.println("The request was sent.");
 
         byte[] message = command.getBytes();
 
