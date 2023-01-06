@@ -1,9 +1,6 @@
 package server.fileSystem;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -12,51 +9,56 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-class FileSystem {
+class FileSystem implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private volatile Hashtable<String, Integer> files;
-    private final Path ROOT = Paths.get("C:\\Users\\junio\\OneDrive\\Bureaublad\\OOP1\\File Server\\File Server\\task\\src\\server\\data");
+    private final String ROOT;
     private volatile boolean exit = false;
 
-    public FileSystem() {
-        //@TODO: Load the hashmap from a file and save it to a file when the server is closed.
-        loadFiles();
+    public FileSystem(String ROOT) {
+        this.ROOT = ROOT;
+        this.files = new Hashtable<>();
     }
 
     /**
      * Delete a file from the server.
      *
-     * @param identifier     the identifier of the file
-     * @param identifierType the type of the identifier either "name" or "id"
-     * @return Status code
+     * @param input  The input stream
+     * @param output The output stream
      */
-//    protected String DELETE(String identifier, String identifierType) {
-//        try {
-//            if (identifierType.equals("id")) {
-//                if (ids.containsKey(identifier)) {
-//                    String fileName = ids.get(identifier);
-//                    ids.remove(identifier);
-//                    files.remove(fileName);
-//                    Files.deleteIfExists(Paths.get(ROOT + "/" + fileName));
-//                    return "200";
-//                }
-//            } else if (identifierType.equals("name")) {
-//                if (files.containsKey(identifier)) {
-//                    ids.forEach((key, value) -> {
-//                        if (value.equals(identifier)) {
-//                            ids.remove(key);
-//                        }
-//                    });
-//                    files.remove(identifier);
-//                    Files.deleteIfExists(Paths.get(ROOT + "/" + identifier));
-//                    return "200";
-//                }
-//            }
-//        } catch (Exception e) {
-//            System.out.println("Error while deleting file: " + e.getMessage());
-//            e.printStackTrace();
-//        }
-//        return "404";
-//    }
+    protected void DELETE(DataInputStream input, DataOutputStream output) {
+        try {
+            int byNameOrId = input.readInt();
+
+            String fileName = byNameOrId == 1 ? input.readUTF() : getByID(input.readInt());
+
+            System.out.println(fileName);
+
+            Path path = Paths.get(ROOT + "/" + fileName);
+
+            if (path.toFile().exists()) {
+                if (path.toFile().delete()) {
+                    files.remove(fileName);
+                    output.writeInt(200);
+                } else {
+                    output.writeInt(500);
+                }
+            } else {
+                output.writeInt(404);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error while deleting file: " + e.getMessage());
+            e.printStackTrace();
+            try {
+                output.writeInt(500);
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+    }
 
     /**
      * Get file data from file name or ID
@@ -126,8 +128,8 @@ class FileSystem {
             e.printStackTrace();
             try {
                 output.writeUTF("500");
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         }
     }
@@ -139,7 +141,7 @@ class FileSystem {
      * @param data     the data of the file
      * @return the ID of the file
      */
-    protected String saveFile(String fileName, byte[] data) {
+    private String saveFile(String fileName, byte[] data) {
         try {
             Path path = Paths.get(ROOT + "/" + fileName);
             try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
@@ -160,7 +162,7 @@ class FileSystem {
      */
     protected void loadFiles() {
         this.files = new Hashtable<>();
-        try (Stream<Path> paths = Files.walk(ROOT)) {
+        try (Stream<Path> paths = Files.walk(Paths.get(ROOT))) {
             paths
                     .filter(Files::isRegularFile)
                     .forEach(file -> {
@@ -178,7 +180,7 @@ class FileSystem {
      * @param fileName the name of the file
      * @return the data of the file
      */
-    protected byte[] getFileData(String fileName) {
+    private byte[] getFileData(String fileName) {
         try {
             return Files.readAllBytes(Paths.get(ROOT + "/" + fileName));
         } catch (Exception e) {
@@ -194,14 +196,12 @@ class FileSystem {
      * @return Unique ID
      */
     private int generateId() {
-        int ID_MAX_LENGTH = 10;
+        int ID_MAX_LENGTH = 2;
         int code = (int) (Math.random() * Math.pow(10, ID_MAX_LENGTH));
 
         if (files.contains(String.valueOf(code))) {
             return generateId();
         }
-
-        System.out.println("Generated ID: " + code);
         return code;
     }
 
@@ -223,6 +223,12 @@ class FileSystem {
         });
 
         return Objects.equals("", fileName.get()) ? "404" : fileName.get();
+    }
+
+    @Serial
+    private void readObject(ObjectInputStream ois) throws Exception {
+        ois.defaultReadObject();
+        exit = false;
     }
 }
 

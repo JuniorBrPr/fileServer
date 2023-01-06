@@ -2,16 +2,20 @@ package server.fileSystem;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.net.ServerSocket;
 import java.net.Socket;
+
+import static server.fileSystem.SerializingUtil.serialize;
 
 class Session implements Runnable {
     private final Socket socket;
     private final FileSystem fileSystem;
+    private final ServerSocket serverSocket;
 
-    public Session(Socket socketForClient, FileSystem fileSystem) {
+    public Session(Socket socketForClient, FileSystem fileSystem, ServerSocket serverSocket) {
         this.socket = socketForClient;
         this.fileSystem = fileSystem;
-        System.out.println("Client connected!");
+        this.serverSocket = serverSocket;
     }
 
     @Override
@@ -23,44 +27,38 @@ class Session implements Runnable {
                     DataOutputStream output = new DataOutputStream(socket.getOutputStream())
             ) {
                 command = input.readUTF();
-                System.out.println("Received command: " + command);
-
-                String message;
 
                 if (command.equals("exit")) {
-                    message = "200";
-                    output.writeUTF(message);
                     this.fileSystem.setExit(true);
-                    this.socket.close();
+                    serialize(this.fileSystem, Server.SERVER_DATA_ROOT);
+                    socket.close();
+                    serverSocket.close();
                     break;
                 } else {
                     try {
                         switch (command.charAt(0)) {
-                            case '1' -> fileSystem.GET(input, output);
-                            case '2' -> fileSystem.PUT(input, output);
-//                            case '3' -> fileSystem.DELETE(command.substring(2));
+                            case '1' -> {
+                                fileSystem.GET(input, output);
+                                socket.close();
+                            }
+                            case '2' -> {
+                                fileSystem.PUT(input, output);
+                                socket.close();
+
+                            }
+                            case '3' -> {
+                                fileSystem.DELETE(input, output);
+                                socket.close();
+                            }
                             default -> System.out.println(501);
-                        };
+                        }
                     } catch (Exception e) {
                         System.out.println("Error: " + e.getMessage());
-                        message = "501";
                     }
+                    break;
                 }
-//                int length = input.readInt();
-//                byte[] messageData = new byte[length];
-//                input.readFully(messageData, 0, messageData.length);
-
-//                command = new String(messageData).substring();
-
-//                command = input.readUTF();
-
-
-
-//                output.writeUTF(message);
-//                socket.close();
-//                break;
             } catch (Exception e) {
-                System.out.println("Error in session: " + e.getMessage() + " " + command);
+                e.printStackTrace();
                 break;
             }
         } while (command.length() == 0 || !fileSystem.isExit());
