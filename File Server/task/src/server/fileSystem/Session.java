@@ -4,15 +4,22 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.logging.Logger;
 
 import static server.fileSystem.SerializingUtil.serialize;
 
 class Session implements Runnable {
+    private static final Logger logger = Logger.getLogger(Session.class.getName());
+    private static final String EXIT_COMMAND = "exit";
+    private static final String GET_COMMAND = "1";
+    private static final String PUT_COMMAND = "2";
+    private static final String DELETE_COMMAND = "3";
+
     private final Socket socket;
     private final FileSystem fileSystem;
     private final ServerSocket serverSocket;
 
-    public Session(Socket socketForClient, FileSystem fileSystem, ServerSocket serverSocket) {
+    Session(Socket socketForClient, FileSystem fileSystem, ServerSocket serverSocket) {
         this.socket = socketForClient;
         this.fileSystem = fileSystem;
         this.serverSocket = serverSocket;
@@ -20,47 +27,32 @@ class Session implements Runnable {
 
     @Override
     public void run() {
-        String command = "";
-        do {
-            try (
-                    DataInputStream input = new DataInputStream(socket.getInputStream());
-                    DataOutputStream output = new DataOutputStream(socket.getOutputStream())
-            ) {
-                command = input.readUTF();
-
-                if (command.equals("exit")) {
+        try (
+                DataInputStream input = new DataInputStream(socket.getInputStream());
+                DataOutputStream output = new DataOutputStream(socket.getOutputStream())
+        ) {
+            String command = input.readUTF();
+            switch (command) {
+                case EXIT_COMMAND:
                     this.fileSystem.setExit(true);
                     serialize(this.fileSystem, Server.SERVER_DATA_ROOT);
                     socket.close();
                     serverSocket.close();
                     break;
-                } else {
-                    try {
-                        switch (command.charAt(0)) {
-                            case '1' -> {
-                                fileSystem.GET(input, output);
-                                socket.close();
-                            }
-                            case '2' -> {
-                                fileSystem.PUT(input, output);
-                                socket.close();
-
-                            }
-                            case '3' -> {
-                                fileSystem.DELETE(input, output);
-                                socket.close();
-                            }
-                            default -> System.out.println(501);
-                        }
-                    } catch (Exception e) {
-                        System.out.println("Error: " + e.getMessage());
-                    }
+                case GET_COMMAND:
+                    fileSystem.GET(input, output);
                     break;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                break;
+                case PUT_COMMAND:
+                    fileSystem.PUT(input, output);
+                    break;
+                case DELETE_COMMAND:
+                    fileSystem.DELETE(input, output);
+                    break;
+                default:
+                    logger.warning("Unrecognized command: " + command);
             }
-        } while (command.length() == 0 || !fileSystem.isExit());
+        } catch (Exception e) {
+            logger.warning("Error while processing command: " + e.getMessage());
+        }
     }
 }

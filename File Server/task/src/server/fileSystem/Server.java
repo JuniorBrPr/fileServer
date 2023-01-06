@@ -34,7 +34,7 @@ public class Server {
         try (ServerSocket server = new ServerSocket(this.PORT, 50, InetAddress.getByName(this.ADDRESS))) {
             System.out.println("Server started!");
             while (!this.fileSystem.isExit()) {
-                this.executor.execute(new Session(server.accept(), this.fileSystem, server));
+                this.executor.submit(new Session(server.accept(), this.fileSystem, server));
             }
 
         } catch (Exception e) {
