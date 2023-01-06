@@ -36,7 +36,7 @@ class Session implements Runnable {
                 } else {
                     try {
                         switch (command.charAt(0)) {
-//                            case '1' -> fileSystem.GET(command.substring(2));
+                            case '1' -> fileSystem.GET(input, output);
                             case '2' -> fileSystem.PUT(input, output);
 //                            case '3' -> fileSystem.DELETE(command.substring(2));
                             default -> System.out.println(501);

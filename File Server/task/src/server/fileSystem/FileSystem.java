@@ -13,11 +13,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 class FileSystem {
-    private volatile Hashtable<String, String> files;
+    private volatile Hashtable<String, Integer> files;
     private final Path ROOT = Paths.get("C:\\Users\\junio\\OneDrive\\Bureaublad\\OOP1\\File Server\\File Server\\task\\src\\server\\data");
     private volatile boolean exit = false;
 
     public FileSystem() {
+        //@TODO: Load the hashmap from a file and save it to a file when the server is closed.
         loadFiles();
     }
 
@@ -60,26 +61,37 @@ class FileSystem {
     /**
      * Get file data from file name or ID
      *
-     * @param identifier     The name or ID of the file
-     * @param identifierType The type of identifier, either "name" or "id"
-     * @return The file data
+     * @param input  The input stream
+     * @param output The output stream
      */
-//    protected byte[] GET(String identifier, String identifierType) {
-//        int byNameOrId = input.readInt();
-//
-//        String fileName = byNameOrId == 1 ? input.readUTF() : getByID(input.readInt());
-//
-//        if (identifierType.equals("name")) {
-//            if (files.containsKey(identifier.strip())) {
-//                return getFileData(identifier.strip());
-//            }
-//        } else if (identifierType.equals("id")) {
-//            if (ids.containsKey(identifier.strip())) {
-//                return getFileData(ids.get(identifier.strip()));
-//            }
-//        }
-//        return "404".getBytes();
-//    }
+    protected void GET(DataInputStream input, DataOutputStream output) {
+        try {
+            int byNameOrId = input.readInt();
+
+            String fileName = byNameOrId == 1 ? input.readUTF() : getByID(input.readInt());
+
+            System.out.println(fileName);
+
+            byte[] fileData = getFileData(fileName);
+
+            if (fileData != null) {
+                output.writeInt(200);
+                output.writeInt(fileData.length);
+                output.write(fileData);
+            } else {
+                output.writeInt(404);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error while getting file: " + e.getMessage());
+            e.printStackTrace();
+            try {
+                output.writeInt(500);
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        }
+    }
 
     /**
      * Add a file to the server.
@@ -131,10 +143,10 @@ class FileSystem {
         try {
             Path path = Paths.get(ROOT + "/" + fileName);
             try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
-                String id = generateId();
+                int id = generateId();
                 fos.write(data, 0, data.length);
                 files.put(fileName.strip(), id);
-                return id;
+                return Integer.toString(id);
             }
         } catch (Exception e) {
             System.out.println("Error while saving file" + e.getMessage());
@@ -181,17 +193,16 @@ class FileSystem {
      *
      * @return Unique ID
      */
-    private String generateId() {
-        double ID_MAX_LENGTH = 10;
-        double code = Math.floor((Math.random() * Math.pow(10, ID_MAX_LENGTH)));
+    private int generateId() {
+        int ID_MAX_LENGTH = 10;
+        int code = (int) (Math.random() * Math.pow(10, ID_MAX_LENGTH));
 
         if (files.contains(String.valueOf(code))) {
             return generateId();
         }
 
         System.out.println("Generated ID: " + code);
-
-        return Double.toString(code);
+        return code;
     }
 
     public boolean isExit() {
@@ -206,7 +217,7 @@ class FileSystem {
         AtomicReference<String> fileName = new AtomicReference<>("");
 
         files.forEach((key, value) -> {
-            if (value.equals(Integer.toString(id))) {
+            if (value.equals(id)) {
                 fileName.set(key);
             }
         });

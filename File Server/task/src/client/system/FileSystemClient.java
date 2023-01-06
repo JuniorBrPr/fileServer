@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class FileSystemClient {
@@ -33,22 +33,24 @@ public class FileSystemClient {
                 } else {
                     switch (command.charAt(0)) {
                         case '1' -> {
-                            getFile(input, output);
+                            GET(input, output);
                             correctCommand = true;
+                            socket.close();
                         }
                         case '2' -> {
-                            addFile(input, output);
+                            PUT(input, output);
                             correctCommand = true;
+                            socket.close();
                         }
                         case '3' -> {
 //                            deleteFile(input, output);
                             correctCommand = true;
+                            socket.close();
                         }
                         default -> System.out.println("Incorrect command!");
                     }
                 }
             } while (!correctCommand);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -104,7 +106,7 @@ public class FileSystemClient {
 //        }
 //    }
 
-    private void addFile(DataInputStream input, DataOutputStream output) throws IOException {
+    private void PUT(DataInputStream input, DataOutputStream output) throws IOException {
         System.out.println("Enter file name:");
         String filename = scanner.nextLine();
 
@@ -142,43 +144,67 @@ public class FileSystemClient {
 //        }
     }
 
-    private void getFile(DataInputStream input, DataOutputStream output) throws IOException {
+    private void GET(DataInputStream input, DataOutputStream output) throws IOException {
         System.out.println("Do you want to get the file by name or by id (1 - name, 2 - id)");
-        String command = scanner.nextLine();
 
-        if (Objects.equals(command, "1")) {
-            output.writeInt(1);
-            System.out.println("Enter filename:");
-            String filename = scanner.nextLine();
-            output.writeUTF(filename);
-        } else {
-            output.writeInt(2);
-            System.out.println("Enter id:");
-            int id = scanner.nextInt();
-            output.writeInt(id);
+        try {
+            output.writeUTF("1");
+            int command = scanner.nextInt();
+
+            if (command == 1) {
+                System.out.println("Enter filename:");
+                String filename = scanner.nextLine();
+                if (filename.isEmpty()) {
+                    filename = scanner.nextLine();
+                }
+                output.writeInt(1);
+                output.writeUTF(filename);
+            } else if (command == 2) {
+                output.writeInt(2);
+                System.out.println("Enter id:");
+                int id = scanner.nextInt();
+                output.writeInt(id);
+            } else {
+                System.out.println("Incorrect command!");
+            }
+        } catch (InputMismatchException e) {
+            System.out.println("Incorrect command, please enter a number!");
         }
 
         System.out.println("The request was sent.");
 
-        byte[] message = command.getBytes();
+        int responseCode = input.readInt();
 
-        output.writeInt(message.length);
-        output.write(message);
+        switch (responseCode) {
+            case 200 -> {
+                int length = input.readInt();
+                byte[] data = new byte[length];
+                input.readFully(data, 0, length);
 
-        System.out.println("The request was sent.");
+                System.out.println("The file was downloaded! Specify a name for it:");
 
-        int length = input.readInt();
-        byte[] msg = new byte[length];
-        input.readFully(msg, 0, msg.length);
+                /*@TODO: add a check for the existence of a file with the same name
+                 *@TODO: Find out why it doesn't work unless checking is filename.isEmpty()
+                 */
+                String filename = scanner.nextLine();
+                if (filename.isEmpty()) {
+                    filename = scanner.nextLine();
+                }
 
-        System.out.println(new String(msg));
-//        String receivedMsg = input.readUTF();
-//
-//        if (receivedMsg.substring(0, 3).matches("404")) {
-//            System.out.println("The response says that the file was not found!");
-//        } else if (receivedMsg.substring(0, 3).matches("200")) {
-//            System.out.println("The content of the file is: " + receivedMsg.substring(4));
-//        }
+                try {
+                    Path path = Paths.get(ROOT + "\\" + filename);
+                    Files.write(path, data);
+
+                    System.out.println("File saved on the hard drive!");
+                } catch (Exception e) {
+                    System.out.println("Error saving file!: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+            case 404 -> System.out.println("The file was not found!");
+            case 403 -> System.out.println("Something went wrong on the server!");
+            default -> System.out.println("Unknown response code!");
+        }
     }
 
     /**
