@@ -19,156 +19,127 @@ public class FileSystemClient {
     private final String ADDRESS = "127.0.0.1";
     private final int PORT = 23456;
     private final String ROOT = "C:\\Users\\junio\\OneDrive\\Bureaublad\\OOP1\\File Server\\File Server\\task\\src\\client\\data";
+    private Socket socket;
+    private DataInputStream in;
+    private DataOutputStream out;
 
-    public FileSystemClient() {
+    public FileSystemClient() throws IOException, InterruptedException {
+        connect();
+
         String command = "";
-        try {
-            sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
-        do {
-            command = "";
+        sleep(2000);
+
+//        do {
             System.out.println("Enter action (1 - get a file, 2 - save a file, 3 - delete a file):");
             command = scanner.nextLine();
             if ("exit".matches(command)) {
-                try (
-                        Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
-                        DataOutputStream output = new DataOutputStream(socket.getOutputStream())
-                ) {
-                    output.writeUTF(command);
-                    System.out.println("The request was sent.");
-                    socket.close();
-                    break;
-                } catch (IOException e) {
-                    System.out.println("Error: " + e.getMessage());
-                    e.printStackTrace();
-                }
+                out.writeUTF(command);
+                System.out.println("The request was sent.");
+                System.exit(1);
             } else if (command.length() != 0) {
                 switch (command.charAt(0)) {
-                    case '1' -> {
-                        GET();
-//                            return;
-                    }
-                    case '2' -> {
-                        PUT();
-//                            return;
-                    }
-                    case '3' -> {
-                        DELETE();
-                    }
+                    case '1' -> GET();
+                    case '2' -> PUT();
+                    case '3' -> DELETE();
                     default -> System.out.println("Incorrect command!");
                 }
             }
-        } while (!command.equals("exit"));
+//        } while (!command.equals("exit"));
     }
 
-    private void DELETE() {
-        try (
-                Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
-                DataInputStream input = new DataInputStream(socket.getInputStream());
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream())
-        ) {
-            requestFile(input, output, "3", "delete");
+    private void connect() throws InterruptedException {
+        try {
+            this.socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
+            this.in = new DataInputStream(socket.getInputStream());
+            this.out = new DataOutputStream(socket.getOutputStream());
+        } catch (IOException e) {
+            System.out.println("Error while connecting to server: " + e.getMessage());
+            sleep(1000);
+            connect();
+        }
+    }
 
-            int responseCode = input.readInt();
-            switch (responseCode) {
-                case 200 -> System.out.println("The response says that this file was deleted successfully!");
-                case 404 -> System.out.println("The response says that this file is not found!");
-                case 500 -> System.out.println("The file was not deleted. Something went wrong on the server.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+    private void DELETE() throws IOException {
+        requestFile(in, out, "3", "delete");
+        int responseCode = in.readInt();
+        switch (responseCode) {
+            case 200 -> System.out.println("The response says that this file was deleted successfully!");
+            case 404 -> System.out.println("The response says that this file is not found!");
+            case 500 -> System.out.println("The file was not deleted. Something went wrong on the server.");
         }
     }
 
 
-    private void PUT() {
+    private void PUT() throws IOException {
         System.out.println("Enter file name:");
-        String filename = scanner.nextLine();
-
-        File file = new File(ROOT + "\\" + filename);
+        String filenameOriginal = scanner.nextLine();
+        File file = new File(ROOT + "\\" + filenameOriginal);
 
         if (file.exists()) {
-            try (
-                    Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
-                    DataInputStream input = new DataInputStream(socket.getInputStream());
-                    DataOutputStream output = new DataOutputStream(socket.getOutputStream())
-            ) {
-                output.writeUTF("2");
-                output.writeUTF(filename);
-                byte[] data = Files.readAllBytes(file.toPath());
+            System.out.println("Enter name of the file to be saved on server:");
+            String filenameServer = scanner.nextLine();
 
-                output.writeInt(data.length);
-                output.write(data);
+            if (filenameServer.length() == 0) {
+                filenameServer = filenameOriginal;
+            }
 
-                System.out.println("The request was sent.");
+            out.writeUTF("2");
+            out.writeUTF(filenameServer);
+            byte[] data = Files.readAllBytes(file.toPath());
 
-                String receivedMsg = input.readUTF();
+            out.writeInt(data.length);
+            out.write(data);
 
-                if (receivedMsg.substring(0, 3).matches("200")) {
-                    System.out.println("Response says that file is saved! ID = "+ receivedMsg.substring(4));
-                } else {
-                    System.out.println("The response says that the file already exists!");
-                }
-            } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
-                e.printStackTrace();
+            System.out.println("The request was sent.");
+
+            String receivedMsg = in.readUTF();
+
+            if (receivedMsg.substring(0, 3).matches("200")) {
+                System.out.println("Response says that file is saved! ID = " + Integer.valueOf(receivedMsg.substring(4)));
+            } else {
+                System.out.println("The response says that the file already exists!");
             }
         } else {
             System.out.println("The file does not exist!");
         }
     }
 
-    private void GET() {
-        try (
-                Socket socket = new Socket(InetAddress.getByName(ADDRESS), PORT);
-                DataInputStream input = new DataInputStream(socket.getInputStream());
-                DataOutputStream output = new DataOutputStream(socket.getOutputStream())
-        ) {
-            requestFile(input, output, "1", "get");
+    private void GET() throws IOException {
+        requestFile(in, out, "1", "get");
 
-            int responseCode = input.readInt();
+        int responseCode = in.readInt();
 
-            switch (responseCode) {
-                case 200 -> {
-                    int length = input.readInt();
-                    byte[] data = new byte[length];
-                    input.readFully(data, 0, length);
+        switch (responseCode) {
+            case 200 -> {
+                int length = in.readInt();
+                byte[] data = new byte[length];
+                in.readFully(data, 0, length);
 
-                    System.out.println("The file was downloaded! Specify a name for it:");
+                System.out.println("The file was downloaded! Specify a name for it:");
 
                 /*
                 @TODO: add a check for the existence of a file with the same name
                 @TODO: Find out why it doesn't work unless checking is filename.isEmpty()
                 */
 
-                    String filename = scanner.nextLine();
-                    if (filename.isEmpty()) {
-                        filename = scanner.nextLine();
-                    }
-
-                    try {
-                        Path path = Paths.get(ROOT + "\\" + filename);
-                        Files.write(path, data);
-
-                        System.out.println("File saved on the hard drive!");
-                    } catch (Exception e) {
-                        System.out.println("Error saving file!: " + e.getMessage());
-                        e.printStackTrace();
-                    }
+                String filename = scanner.nextLine();
+                if (filename.isEmpty()) {
+                    filename = scanner.nextLine();
                 }
-                case 404 -> System.out.println("The file was not found!");
-                case 403 -> System.out.println("Something went wrong on the server!");
-                default -> System.out.println("Unknown response code!");
+                try {
+                    Path path = Paths.get(ROOT + "\\" + filename);
+                    Files.write(path, data);
+                    System.out.println("File saved on the hard drive!");
+                } catch (Exception e) {
+                    System.out.println("Error saving file!: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            case 404 -> System.out.println("The response says that this file is not found!");
+            case 403 -> System.out.println("Something went wrong on the server!");
+            default -> System.out.println("Unknown response code!");
         }
-
     }
 
     private void requestFile(DataInputStream input, DataOutputStream output, String option, String requestType)

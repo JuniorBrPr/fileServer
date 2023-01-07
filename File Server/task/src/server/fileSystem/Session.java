@@ -41,18 +41,20 @@ class Session implements Runnable {
                     break;
                 case GET_COMMAND:
                     fileSystem.GET(input, output);
+                    run();
                     break;
                 case PUT_COMMAND:
                     fileSystem.PUT(input, output);
+                    run();
                     break;
                 case DELETE_COMMAND:
                     fileSystem.DELETE(input, output);
                     break;
                 default:
-                    logger.warning("Unrecognized command: " + command);
+                    System.out.println("Unrecognized command: " + command);
             }
         } catch (Exception e) {
-            logger.warning("Error while processing command: " + e.getMessage());
+            System.out.println("Error while processing command: " + e.getMessage());
         }
     }
 }

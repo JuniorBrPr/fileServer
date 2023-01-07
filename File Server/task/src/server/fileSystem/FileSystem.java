@@ -16,6 +16,7 @@ class FileSystem implements Serializable {
     private volatile Hashtable<String, Integer> files;
     private final String ROOT;
     private volatile boolean exit = false;
+//    private final AtomicReference<Hashtable<String, Integer>> filesCopy = new AtomicReference<>(new Hashtable<>());
 
     public FileSystem(String ROOT) {
         this.ROOT = ROOT;
@@ -76,7 +77,7 @@ class FileSystem implements Serializable {
 
             byte[] fileData = getFileData(fileName);
 
-            if (fileData != null) {
+            if (fileData.length > 0) {
                 output.writeInt(200);
                 output.writeInt(fileData.length);
                 output.write(fileData);
